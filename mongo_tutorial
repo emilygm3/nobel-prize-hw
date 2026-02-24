@@ -1,7 +1,7 @@
 1. How many nobel prize winners are female vs male?
 
 Query:
-db.prize.aggregate([ { $group: { _id: "$gender", count: { $sum: 1 } } } ])
+db.prize.aggregate([{$group: {_id: "$gender", count: {$sum: 1}}}])
 
 Results:
 [
@@ -9,6 +9,59 @@ Results:
   { _id: null, count: 1 },
   { _id: 'female', count: 67 },
   { _id: 'org', count: 28 }
+]
+
+
+
+2. What countries have won the most prizes?
+
+Query:
+db.prize.aggregate([
+     {"$match": {"bornCountry": {"$exists": true}}},
+     {"$group": {
+         "_id": "$bornCountry",
+         "count": {"$sum": 1}
+     }},
+     {"$sort": {"count": -1}},
+     {"$limit": 10}
+ ])
+
+Result:
+[
+  { _id: 'USA', count: 296 },
+  { _id: 'United Kingdom', count: 94 },
+  { _id: 'Germany', count: 67 },
+  { _id: 'France', count: 60 },
+  { _id: 'Japan', count: 30 },
+  { _id: 'Sweden', count: 30 },
+  { _id: 'Canada', count: 22 },
+  { _id: 'the Netherlands', count: 20 },
+  { _id: 'Switzerland', count: 19 },
+  { _id: 'Russia', count: 18 }
+]
+
+
+
+3. Which categories are the most represented?
+
+Query:
+db.prize.aggregate([
+        {"$unwind": "$prizes"},
+        {"$group": {
+            "_id": "$prizes.category",
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"count": -1}}
+    ])
+
+Result:
+[
+  { _id: 'medicine', count: 232 },
+  { _id: 'physics', count: 230 },
+  { _id: 'chemistry', count: 200 },
+  { _id: 'peace', count: 143 },
+  { _id: 'literature', count: 122 },
+  { _id: 'economics', count: 99 }
 ]
 
 
