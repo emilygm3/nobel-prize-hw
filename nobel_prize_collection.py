@@ -38,7 +38,7 @@ def top_countries(limit=10):
     for doc in results:
         print(doc["_id"], doc["count"])
 
-top_countries()
+# top_countries()
 
 
 def top_categories():
@@ -57,3 +57,14 @@ def top_categories():
         print(doc["_id"], doc["count"])
 
 # top_categories()
+
+def laureate_ages():
+    for laureate in db.collection.find({"born": {"$exists": True}, "prizes": {"$exists": True}}):
+        born_year = int(laureate["born"][:4])  # Take first 4 chars of 'YYYY-MM-DD'
+
+        for prize in laureate["prizes"]:
+            prize_year = int(prize["year"])
+            age = prize_year - born_year
+            print(f"{laureate['firstname']} {laureate['surname']} won {prize['category']} at age {age}")
+
+laureate_ages()
