@@ -22,21 +22,21 @@ result = db.collection.insert_many(prize_data)
 # countries = db.collection.distinct("bornCountry")
 # print(countries)
 
+def top_countries(limit=10):
+    pipeline = [
+        {"$match": {"bornCountry": {"$exists": True}}},
+        {"$group": {
+            "_id": "$bornCountry",
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": limit}
+    ]
 
-pipeline = [
-    {"$match": {"bornCountry": {"$exists": True}}},
-    {"$group": {
-        "_id": "$bornCountry",
-        "count": {"$sum": 1}
-    }},
-    {"$sort": {"count": -1}},
-    {"$limit": 10}
-]
+    results = db.collection.aggregate(pipeline)
 
-results = db.collection.aggregate(pipeline)
-
-for doc in results:
-    print(doc["_id"], doc["count"])
+    for doc in results:
+        print(doc["_id"], doc["count"])
 
 
-
+top_countries()
