@@ -1,0 +1,18 @@
+1. How many nobel prize winners are female vs male?
+
+Query:
+db.prize.aggregate([ { $group: { _id: "$gender", count: { $sum: 1 } } } ])
+
+Results:
+[
+  { _id: 'male', count: 923 },
+  { _id: null, count: 1 },
+  { _id: 'female', count: 67 },
+  { _id: 'org', count: 28 }
+]
+
+
+
+
+
+
