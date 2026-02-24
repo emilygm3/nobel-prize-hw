@@ -38,5 +38,22 @@ def top_countries(limit=10):
     for doc in results:
         print(doc["_id"], doc["count"])
 
-
 top_countries()
+
+
+def top_categories():
+    pipeline = [
+        {"$unwind": "$prizes"},  # Break out each prize into its own document
+        {"$group": {
+            "_id": "$prizes.category",  # Group by category
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"count": -1}}  # Sort descending
+    ]
+
+    results = db.collection.aggregate(pipeline)
+
+    for doc in results:
+        print(doc["_id"], doc["count"])
+
+# top_categories()
