@@ -3,6 +3,8 @@ from pymongo import MongoClient
 import json
 import pprint
 
+from sympy import limit
+
 client = MongoClient()
 db = client.prize
 
@@ -58,13 +60,33 @@ def top_categories():
 
 # top_categories()
 
-def laureate_ages():
-    for laureate in db.collection.find({"born": {"$exists": True}, "prizes": {"$exists": True}}):
-        born_year = int(laureate["born"][:4])  # Take first 4 chars of 'YYYY-MM-DD'
+# def laureate_ages():
+#     for laureate in db.collection.find({"born": {"$exists": True}, "prizes": {"$exists": True}}):
+#         born_year = int(laureate["born"][:4])  # Take first 4 chars of 'YYYY-MM-DD'
 
-        for prize in laureate["prizes"]:
-            prize_year = int(prize["year"])
-            age = prize_year - born_year
-            print(f"{laureate['firstname']} {laureate['surname']} won {prize['category']} at age {age}")
+#         for prize in laureate["prizes"]:
+#             prize_year = int(prize["year"])
+#             age = prize_year - born_year
+#             print(f"{laureate['firstname']} {laureate['surname']} won {prize['category']} at age {age}")
 
-laureate_ages()
+# laureate_ages()
+
+def ages_of_laureates():
+    pipeline = [
+    {"$match": {"born": {"$exists": True}, "prizes": {"$exists": True}}},
+    {"$unwind": "$prizes"},
+    {"$project": {
+        "_id": 0,
+        "age": {
+            "$subtract": [
+                {"$toInt": "$prizes.year"},
+                {"$toInt": {"$substr": ["$born", 0, 4]}}
+            ]
+        }
+    }}
+    ]
+
+    results = db.collection.aggregate(pipeline)
+    ages = [doc["age"] for doc in results]
+
+    return ages
