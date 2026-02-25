@@ -129,5 +129,24 @@ def top_category_per_country(limit=10):
     for doc in results:
         print(doc["_id"], ":", doc["topCategory"], "(", doc["count"], ")")
 
-top_category_per_country()
+# top_category_per_country()
 
+def most_prizes_per_year(limit=10):
+    pipeline = [
+        {"$unwind": "$prizes"},
+
+        {"$group": {
+            "_id": "$prizes.year",
+            "count": {"$sum": 1}
+        }},
+
+        {"$sort": {"count": -1}},
+        {"$limit" : limit}
+    ]
+
+    results = db.collection.aggregate(pipeline)
+
+    for doc in results:
+        print("Year:", doc["_id"], "Prizes won:", doc["count"])
+
+most_prizes_per_year()
