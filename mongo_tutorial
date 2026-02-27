@@ -1,9 +1,23 @@
-1. How many nobel prize winners are female vs male?
+Full mongo tutorial with nobel prize winner data
+    - First, download laureates_array.json
 
+How to load laureate data into database
+1.  Start mongo server by entering "mongo-server"
+2.  In a new terminal window, navigate your directory with laureates_array.json
+3.  Type "mongoimport --db nobel --collection winner --file laureates_array.json --jsonArray"
+      - This creates the database nobel, the collection winner, and adds all the documents from laureates_array.json
+4.  Enter "mongo-cli"
+5.  Enter "use nobel"
+      - Now you can type queries into the shell and get results
+
+
+Different questions and their associated queries:
+
+1. How many nobel prize winners were female vs male?
 Query:
 db.prize.aggregate([{$group: {_id: "$gender", count: {$sum: 1}}}])
 
-Results:
+Result:
 [
   { _id: 'male', count: 923 },
   { _id: null, count: 1 },
@@ -12,19 +26,17 @@ Results:
 ]
 
 
-
-2. What countries have won the most prizes?
-
+2. Which countries have won the most prizes overall?
 Query:
 db.prize.aggregate([
-     {"$match": {"bornCountry": {"$exists": true}}},
-     {"$group": {
-         "_id": "$bornCountry",
-         "count": {"$sum": 1}
-     }},
-     {"$sort": {"count": -1}},
-     {"$limit": 10}
- ])
+    {"$match": {"bornCountry": {"$exists": true}}},
+    {"$group": {
+        "_id": "$bornCountry",
+        "count": {"$sum": 1}
+    }},
+    {"$sort": {"count": -1}},
+    {"$limit": 10}
+])
 
 Result:
 [
@@ -41,18 +53,16 @@ Result:
 ]
 
 
-
-3. Which categories are the most represented?
-
+3. Which nobel prize categories are the most represented amongst winners?
 Query:
 db.prize.aggregate([
-        {"$unwind": "$prizes"},
-        {"$group": {
-            "_id": "$prizes.category",
-            "count": {"$sum": 1}
-        }},
-        {"$sort": {"count": -1}}
-    ])
+    {"$unwind": "$prizes"},
+    {"$group": {
+        "_id": "$prizes.category",
+        "count": {"$sum": 1}
+    }},
+    {"$sort": {"count": -1}}
+])
 
 Result:
 [
@@ -65,7 +75,142 @@ Result:
 ]
 
 
+4. What is the top nobel prize category for each country?- is this by distinct prize or total # winners?
+Query:
+db.winner.aggregate([
+    {$match: {bornCountry: {$exists: true}}},
+    {$unwind: "$prizes"},
+    {$group: {_id: {country: "$bornCountry", category: "$prizes.category"}, count: {$sum: 1}}},
+    {$sort: {"_id.country": 1, count: -1}},
+    {$group: {_id: "$_id.country", topCategory: {$first: "$_id.category"}, count: {$first: "$count"}}},
+    {$sort: {count: -1}},
+    {$limit: 10}
+])
+
+Result:
+[
+  { _id: 'USA', topCategory: 'medicine', count: 84 },
+  { _id: 'United Kingdom', topCategory: 'chemistry', count: 27 },
+  { _id: 'Germany', topCategory: 'chemistry', count: 22 },
+  { _id: 'Japan', topCategory: 'physics', count: 12 },
+  { _id: 'France', topCategory: 'literature', count: 12 },
+  { _id: 'the Netherlands', topCategory: 'physics', count: 9 },
+  { _id: 'Sweden', topCategory: 'medicine', count: 8 },
+  { _id: 'Australia', topCategory: 'medicine', count: 7 },
+  { _id: 'Italy', topCategory: 'physics', count: 6 },
+  { _id: 'Russia', topCategory: 'physics', count: 6 }
+]
 
 
+5. Typically how old are nobel prize winners? - counts per age buckets
+
+Query:
+db.winner.aggregate([
+    {$unwind: "$prizes"},
+    {$match: {born: {$exists: true, $ne: "0000-00-00"}, gender: {$ne: "org"}}},
+    {$addFields: {age: {$subtract: [
+        {$toInt: {$substr: ["$prizes.year", 0, 4]}},
+        {$toInt: {$substr: ["$born", 0, 4]}}
+    ]}}},
+    {$bucket: {
+        groupBy: "$age",
+        boundaries: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+        default: "other",
+        output: {count: {$sum: 1}}
+    }},
+    {$project: {
+        age_range: {$concat: [{$toString: "$_id"}, "-", {$toString: {$add: ["$_id", 4]}}]},
+        count: 1,
+        _id: 0
+    }}
+])
+
+Result:
+[
+  { count: 1, age_range: '15-19' },
+  { count: 2, age_range: '25-29' },
+  { count: 14, age_range: '30-34' },
+  { count: 35, age_range: '35-39' },
+  { count: 55, age_range: '40-44' },
+  { count: 104, age_range: '45-49' },
+  { count: 115, age_range: '50-54' },
+  { count: 131, age_range: '55-59' },
+  { count: 168, age_range: '60-64' },
+  { count: 118, age_range: '65-69' },
+  { count: 110, age_range: '70-74' },
+  { count: 79, age_range: '75-79' },
+  { count: 37, age_range: '80-84' },
+  { count: 20, age_range: '85-89' },
+  { count: 4, age_range: '90-94' },
+  { count: 2, age_range: '95-99' }
+]
+
+
+6. Have any minors ever been awarded a nobel prize? If so, who?
+Query:
+db.winner.aggregate([
+    {$unwind: "$prizes"},
+    {$match: {
+        born: {$exists: true, $ne: "0000-00-00"},
+        gender: {$ne: "org"}
+    }},
+    {$addFields: {
+        age: {$subtract: [
+          {$toInt: {$substr: ["$prizes.year", 0, 4]}},
+          {$toInt: {$substr: ["$born", 0, 4]}}
+        ]}
+    }},
+    {$match: {age: {$lt: 18}}}
+])
+
+Result:
+[
+  {
+    _id: ObjectId('69a18924e41667133ac1e567'),
+    id: '914',
+    firstname: 'Malala',
+    surname: 'Yousafzai',
+    born: '1997-07-12',
+    died: '0000-00-00',
+    bornCountry: 'Pakistan',
+    bornCountryCode: 'PK',
+    bornCity: 'Mingora',
+    gender: 'female',
+    prizes: {
+      year: '2014',
+      category: 'peace',
+      share: '2',
+      motivation: '"for their struggle against the suppression of children and young people and for the right of all children to education"',
+      affiliations: [ [] ]
+    },
+    age: 17
+  }
+]
+
+
+7. What year was each prize category introduced?
+
+
+8. Were there more solo nobel prizes than collaborative prizes? And did this change over time?
+
+
+8. What is the typical number of people per prize per category?
+
+
+10. Are there any categories that split the prize unevenly more often than others?
+
+
+11. How many prize winners had affiliations with their birth country? How many explicitly did not?
+
+
+12. Find all winners who received a prize about this topic: electricity
+
+
+Visualization Ideas
+    - age histogram to show number per bucket
+    - scatterplot with year on x axis and age on y axis, could plot linreg line of best fit
+    - line graph for top ten countries to show how their winning frequency has changed over time
+    - among the 10 most decorated countries, make stacked bar chart divided by category of prize
+        - maybe pi charts would be best, b/c purpose of graph would be to show proportions not counts?
 
 
