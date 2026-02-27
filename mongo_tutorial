@@ -1,7 +1,7 @@
 Full mongo tutorial with nobel prize winner data
     - First, download laureates_array.json
 
-How to load laureate data into database
+How to load laureate data into database using shell
 1.  Start mongo server by entering "mongo-server"
 2.  In a new terminal window, navigate your directory with laureates_array.json
 3.  Type "mongoimport --db nobel --collection winner --file laureates_array.json --jsonArray"
@@ -189,21 +189,149 @@ Result:
 
 
 7. What year was each prize category introduced?
+Query:
+db.winner.aggregate([
+    {$unwind: "$prizes"},
+    {$group: {_id: "$prizes.category", firstYear: {$min: "$prizes.year"}}},
+    {$sort: {firstYear: 1}}
+])
+
+Result:
+[
+  { _id: 'literature', firstYear: '1901' },
+  { _id: 'chemistry', firstYear: '1901' },
+  { _id: 'physics', firstYear: '1901' },
+  { _id: 'peace', firstYear: '1901' },
+  { _id: 'medicine', firstYear: '1901' },
+  { _id: 'economics', firstYear: '1969' }
+]
 
 
 8. Were there more solo nobel prizes than collaborative prizes? And did this change over time?
+Query:
+db.winner.aggregate([
+    {$unwind: "$prizes" },
+    {$group: {_id: {year: "$prizes.year", category: "$prizes.category"}, winners: {$sum: 1}}},
+    {$addFields: {type: {$cond: [{$eq: ["$winners", 1]}, "solo", "collaborative"]}}},
+    {$group: {
+        _id: {decade: {$subtract: [{$toInt: "$_id.year"}, {$mod: [{$toInt: "$_id.year"}, 10]}]}, type: "$type"},
+        count: {$sum: 1}
+    }},
+    {$sort: {"_id.decade": 1, "_id.type": 1}}
+])
 
+Result:
+[
+  { _id: { decade: 1900, type: 'collaborative' }, count: 11 },
+  { _id: { decade: 1900, type: 'solo' }, count: 34 },
+  { _id: { decade: 1910, type: 'collaborative' }, count: 4 },
+  { _id: { decade: 1910, type: 'solo' }, count: 32 },
+  { _id: { decade: 1920, type: 'collaborative' }, count: 10 },
+  { _id: { decade: 1920, type: 'solo' }, count: 34 },
+  { _id: { decade: 1930, type: 'collaborative' }, count: 11 },
+  { _id: { decade: 1930, type: 'solo' }, count: 33 },
+  { _id: { decade: 1940, type: 'collaborative' }, count: 8 },
+  { _id: { decade: 1940, type: 'solo' }, count: 24 },
+  { _id: { decade: 1950, type: 'collaborative' }, count: 18 },
+  { _id: { decade: 1950, type: 'solo' }, count: 30 },
+  { _id: { decade: 1960, type: 'collaborative' }, count: 20 },
+  { _id: { decade: 1960, type: 'solo' }, count: 29 },
+  { _id: { decade: 1970, type: 'collaborative' }, count: 32 },
+  { _id: { decade: 1970, type: 'solo' }, count: 27 },
+  { _id: { decade: 1980, type: 'collaborative' }, count: 24 },
+  { _id: { decade: 1980, type: 'solo' }, count: 36 },
+  { _id: { decade: 1990, type: 'collaborative' }, count: 32 },
+  { _id: { decade: 1990, type: 'solo' }, count: 28 }
+]
 
-8. What is the typical number of people per prize per category?
+9. What is the typical number of people per prize per category?
+Query:
+db.winner.aggregate([
+  { $unwind: "$prizes" },
+  { $group: {
+      _id: { year: "$prizes.year", category: "$prizes.category" },
+      winnersCount: { $sum: 1 }
+  }},
+  { $group: {
+      _id: "$_id.category",
+      one_winner:   { $sum: { $cond: [{ $eq: ["$winnersCount", 1] }, 1, 0] } },
+      two_winners:  { $sum: { $cond: [{ $eq: ["$winnersCount", 2] }, 1, 0] } },
+      three_winners: { $sum: { $cond: [{ $eq: ["$winnersCount", 3] }, 1, 0] } }
+  }},
+  { $sort: { _id: 1 } }
+])
+
+Result:
+[
+  { _id: 'chemistry', one_winner: 63, two_winners: 25, three_winners: 29 },
+  { _id: 'economics', one_winner: 26, two_winners: 20, three_winners: 11 },
+  { _id: 'literature', one_winner: 114, two_winners: 4, three_winners: 0 },
+  { _id: 'medicine', one_winner: 40, two_winners: 36, three_winners: 40 },
+  { _id: 'peace', one_winner: 72, two_winners: 31, three_winners: 3 },
+  { _id: 'physics', one_winner: 47, two_winners: 33, three_winners: 39 }
+]
 
 
 10. Are there any categories that split the prize unevenly more often than others?
+Query:
+db.winner.aggregate([
+  { $unwind: "$prizes" },
+  { $group: {
+      _id: { year: "$prizes.year", category: "$prizes.category" },
+      shares: { $push: "$prizes.share" },
+      category: { $first: "$prizes.category" }
+  }},
+  { $addFields: {
+      isUneven: { $gt: [{ $size: { $setUnion: ["$shares", []] } }, 1] }
+  }},
+  { $match: { isUneven: true } },
+  { $group: { _id: "$category", unevenCount: { $sum: 1 } } },
+  { $sort: { unevenCount: -1 } }
+])
 
-
-11. How many prize winners had affiliations with their birth country? How many explicitly did not?
+Result:
+[
+  { _id: 'physics', unevenCount: 20 },
+  { _id: 'chemistry', unevenCount: 9 },
+  { _id: 'medicine', unevenCount: 8 },
+  { _id: 'economics', unevenCount: 2 }
+]
 
 
 12. Find all winners who received a prize about this topic: electricity
+Query:
+db.winner.find(
+    {"prizes.motivation": {$regex: "electricity", $options: "i"}},
+    {firstname: 1, surname: 1, "prizes.year": 1, "prizes.category": 1, "prizes.motivation": 1}
+)
+
+Result:
+[
+  {
+    _id: ObjectId('69a18924e41667133ac1e1eb'),
+    firstname: 'J.J.',
+    surname: 'Thomson',
+    prizes: [
+      {
+        year: '1906',
+        category: 'physics',
+        motivation: '"in recognition of the great merits of his theoretical and experimental investigations on the conduction of electricity by gases"'
+      }
+    ]
+  },
+  {
+    _id: ObjectId('69a18924e41667133ac1e210'),
+    firstname: 'Robert A.',
+    surname: 'Millikan',
+    prizes: [
+      {
+        year: '1923',
+        category: 'physics',
+        motivation: '"for his work on the elementary charge of electricity and on the photoelectric effect"'
+      }
+    ]
+  }
+]
 
 
 Visualization Ideas
@@ -211,6 +339,7 @@ Visualization Ideas
     - scatterplot with year on x axis and age on y axis, could plot linreg line of best fit
     - line graph for top ten countries to show how their winning frequency has changed over time
     - among the 10 most decorated countries, make stacked bar chart divided by category of prize
-        - maybe pi charts would be best, b/c purpose of graph would be to show proportions not counts?
+    - pi charts for each category showing proportions of prizes with one, two, and three winners
+
 
 
