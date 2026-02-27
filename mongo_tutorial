@@ -247,18 +247,15 @@ Result:
 9. What is the typical number of people per prize per category?
 Query:
 db.winner.aggregate([
-  { $unwind: "$prizes" },
-  { $group: {
-      _id: { year: "$prizes.year", category: "$prizes.category" },
-      winnersCount: { $sum: 1 }
-  }},
-  { $group: {
-      _id: "$_id.category",
-      one_winner:   { $sum: { $cond: [{ $eq: ["$winnersCount", 1] }, 1, 0] } },
-      two_winners:  { $sum: { $cond: [{ $eq: ["$winnersCount", 2] }, 1, 0] } },
-      three_winners: { $sum: { $cond: [{ $eq: ["$winnersCount", 3] }, 1, 0] } }
-  }},
-  { $sort: { _id: 1 } }
+    {$unwind: "$prizes"},
+    {$group: {_id: {year: "$prizes.year", category: "$prizes.category"}, winnersCount: {$sum: 1}}},
+    {$group: {
+        _id: "$_id.category",
+        one_winner:   {$sum: {$cond: [{$eq: ["$winnersCount", 1]}, 1, 0]}},
+        two_winners:  {$sum: {$cond: [{$eq: ["$winnersCount", 2]}, 1, 0]}},
+        three_winners: {$sum: {$cond: [{$eq: ["$winnersCount", 3]}, 1, 0]}}
+    }},
+    {$sort: {_id: 1}}
 ])
 
 Result:
@@ -275,18 +272,16 @@ Result:
 10. Are there any categories that split the prize unevenly more often than others?
 Query:
 db.winner.aggregate([
-  { $unwind: "$prizes" },
-  { $group: {
-      _id: { year: "$prizes.year", category: "$prizes.category" },
-      shares: { $push: "$prizes.share" },
-      category: { $first: "$prizes.category" }
-  }},
-  { $addFields: {
-      isUneven: { $gt: [{ $size: { $setUnion: ["$shares", []] } }, 1] }
-  }},
-  { $match: { isUneven: true } },
-  { $group: { _id: "$category", unevenCount: { $sum: 1 } } },
-  { $sort: { unevenCount: -1 } }
+    {$unwind: "$prizes"},
+    {$group: {
+        _id: {year: "$prizes.year", category: "$prizes.category"},
+        shares: {$push: "$prizes.share"},
+        category: {$first: "$prizes.category"}
+    }},
+    {$addFields: {isUneven: {$gt: [{$size: {$setUnion: ["$shares", []]}}, 1]}}},
+    {$match: {isUneven: true}},
+    {$group: {_id: "$category", unevenCount: {$sum: 1}}},
+    {$sort: {unevenCount: -1}}
 ])
 
 Result:
@@ -333,16 +328,14 @@ Result:
   }
 ]
 
+
 12. Get the number of prizes won by each country per decade
 Query:
 db.winner.aggregate([
     {$match: {bornCountry: {$exists: true}}},
     {$unwind: "$prizes"},
     {$group: {
-        _id: {
-            country: "$bornCountry",
-            decade: {$subtract: [{$toInt: "$prizes.year"}, {$mod: [{$toInt: "$prizes.year"}, 10]}]}
-        },
+        _id: {country: "$bornCountry", decade: {$subtract: [{$toInt: "$prizes.year"}, {$mod: [{$toInt: "$prizes.year"}, 10]}]}},
         count: {$sum: 1}
     }},
     {$sort: {"_id.decade": 1}}
@@ -350,13 +343,14 @@ db.winner.aggregate([
 
 Result: ___
 
-13. What are the ages of the winners eacb year?
+13. What are the ages of the winners each year?
 Query:
 db.winner.aggregate([
     {$unwind: "$prizes"},
     {$match: {born: {$exists: true, $ne: "0000-00-00"}, gender: {$ne: "org"}}},
     {$project: {
         _id: 0,
+        name: 1,
         year: {$toInt: "$prizes.year"},
         age: {$subtract: [
             {$toInt: {$substr: ["$prizes.year", 0, 4]}},
@@ -366,6 +360,9 @@ db.winner.aggregate([
 ])
 
 Results: __
+
+
+
 
 Visualization Ideas
     - age histogram to show number per bucket
