@@ -103,7 +103,6 @@ Result:
 
 
 5. Typically how old are nobel prize winners? - counts per age buckets
-
 Query:
 db.winner.aggregate([
     {$unwind: "$prizes"},
@@ -188,7 +187,7 @@ Result:
 ]
 
 
-7. What year was each prize category introduced?
+7. What year was each prize category first introduced?
 Query:
 db.winner.aggregate([
     {$unwind: "$prizes"},
@@ -329,7 +328,7 @@ Result:
 ]
 
 
-12. Get the number of prizes won by each country per decade
+12. How many prizes did each country win per decade?
 Query:
 db.winner.aggregate([
     {$match: {bornCountry: {$exists: true}}},
@@ -341,35 +340,37 @@ db.winner.aggregate([
     {$sort: {"_id.decade": 1}}
 ]) 
 
-Result: ___
-
-13. What are the ages of the winners each year?
-Query:
-db.winner.aggregate([
-    {$unwind: "$prizes"},
-    {$match: {born: {$exists: true, $ne: "0000-00-00"}, gender: {$ne: "org"}}},
-    {$project: {
-        _id: 0,
-        name: 1,
-        year: {$toInt: "$prizes.year"},
-        age: {$subtract: [
-            {$toInt: {$substr: ["$prizes.year", 0, 4]}},
-            {$toInt: {$substr: ["$born", 0, 4]}}
-        ]}
-    }}
-])
-
-Results: __
-
-
-
-
-Visualization Ideas
-    - age histogram to show number per bucket
-    - scatterplot with year on x axis and age on y axis, could plot linreg line of best fit
-    - line graph for top ten countries to show how their winning frequency has changed over time
-    - among the 10 most decorated countries, make stacked bar chart divided by category of prize
-    - pi charts for each category showing proportions of prizes with one, two, and three winners
-
-
+Result:
+[
+  {
+    _id: { country: 'Russian Empire (now Poland)', decade: 1900 },
+    count: 1
+  },
+  { _id: { country: 'Luxembourg', decade: 1900 }, count: 1 },
+  { _id: { country: 'Italy', decade: 1900 }, count: 2 },
+  {
+    _id: { country: 'Austrian Empire (now Czech Republic)', decade: 1900 },
+    count: 1
+  },
+  { _id: { country: 'Scotland', decade: 1900 }, count: 1 },
+  { _id: { country: 'Switzerland', decade: 1900 }, count: 4 },
+  { _id: { country: 'Bavaria (now Germany)', decade: 1900 }, count: 1 },
+  { _id: { country: 'Poland', decade: 1900 }, count: 1 },
+  {
+    _id: { country: 'Hesse-Kassel (now Germany)', decade: 1900 },
+    count: 1
+  },
+  { _id: { country: 'Russia', decade: 1900 }, count: 1 },
+  { _id: { country: 'USA', decade: 1900 }, count: 1 },
+  { _id: { country: 'Prussia (now Poland)', decade: 1900 }, count: 3 },
+  { _id: { country: 'Sweden', decade: 1900 }, count: 3 },
+  { _id: { country: 'New Zealand', decade: 1900 }, count: 1 },
+  { _id: { country: 'Belgium', decade: 1900 }, count: 1 },
+  { _id: { country: 'United Kingdom', decade: 1900 }, count: 3 },
+  { _id: { country: 'France', decade: 1900 }, count: 9 },
+  { _id: { country: 'Germany', decade: 1900 }, count: 1 },
+  { _id: { country: 'Hungary (now Slovakia)', decade: 1900 }, count: 1 },
+  { _id: { country: 'Spain', decade: 1900 }, count: 2 }
+]
+(continues on)
 
