@@ -1,18 +1,7 @@
-Full mongo tutorial with Nobel prize winner data
+Mongo example queries with Nobel prize winner data
 By Eleanor Lopez, Ella Bitterman, and Emily Moy
-    - First, download laureates_array.json
+    - Using laureate.json
 
-How to load laureate data into database using shell
-1.  Start mongo server by entering "mongo-server"
-2.  In a new terminal window, navigate your directory with laureates_array.json
-3.  Type "mongoimport --db nobel --collection winner --file laureates_array.json --jsonArray"
-      - This creates the database nobel, the collection winner, and adds all the documents from laureates_array.json
-4.  Enter "mongo-cli"
-5.  Enter "use nobel"
-      - Now you can type queries into the shell and get results
-
-
-Different questions and their associated queries:
 
 1. How many nobel prize winners were female vs male?
 Query:
