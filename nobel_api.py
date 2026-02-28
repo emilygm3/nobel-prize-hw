@@ -21,6 +21,11 @@ class NobelAPI:
         self.collection = db.collection
 
     def top_countries(self, limit=10):
+        """
+        Creates a dictionary of how many Nobel Prize winners are from each country, from most to least
+        :param limit: the number of countries added, defaults to 10
+        :return: dictionary of countries and number of Nobel Prize winners from that country
+        """
         pipeline = [
             {"$match": {"bornCountry": {"$exists": True}}},
             {"$group": {"_id": "$bornCountry", "count": {"$sum": 1}}},
@@ -32,6 +37,11 @@ class NobelAPI:
 
 
     def top_categories(self):
+        """
+        Creates a dictionary of the Nobel Prize categories and the number of prizes won for each
+        category from most to least
+        :return: dictionary of categories and number of Nobel Prize winners from that category
+        """
         pipeline = [
             {"$unwind": "$prizes"},
             {"$group": {"_id": "$prizes.category", "count": {"$sum": 1}}},
@@ -42,6 +52,11 @@ class NobelAPI:
 
 
     def most_prizes_per_year(self, limit=10):
+        """
+        Creates a dictionary of how many prizes won for each year from most to least
+        :param limit: the number of years added, defaults to 10
+        :return: a dictionary of years and number of prizes won for each year
+        """
         pipeline = [
             {"$unwind": "$prizes"},
             {"$group": {"_id": "$prizes.year", "count": {"$sum": 1}}},
@@ -53,6 +68,10 @@ class NobelAPI:
 
 
     def laureate_gender(self):
+        """
+        Creates a dictionary of genders and how many winners are male or female
+        :return: dictionary of genders and number of winners in each category
+        """
         pipeline = [
             {"$group": {"_id": "$gender", "count": {"$sum": 1}}}
         ]
@@ -61,6 +80,10 @@ class NobelAPI:
 
 
     def laureate_ages_yearly(self):
+        """
+        Creates a list of dictionaries of the year winners won and ages of the winners
+        :return: a list of dictionaries of years and ages of winners
+        """
         pipeline = [
             {"$unwind": "$prizes"},
             {"$match": {"born": {"$exists": True, "$ne": "0000-00-00"},
@@ -78,6 +101,10 @@ class NobelAPI:
 
 
     def ages_of_laureates(self):
+        """
+        Creates a dictionary of ages and the number of winners who won at that age
+        :return: dictionary of ages and count of winners
+        """
         pipeline = [
             {"$unwind": "$prizes"},
             {"$match": {"born": {"$exists": True, "$ne": "0000-00-00"},
@@ -100,6 +127,10 @@ class NobelAPI:
 
 
     def minor_winners(self):
+        """
+        Creates a list of dictionaries of the winners who were under the age of 18 when they won
+        :return: list of dictionaries of minor winners
+        """
         pipeline = [
             {"$unwind": "$prizes"},
             {"$match": {"born": {"$exists": True, "$ne": "0000-00-00"},
@@ -116,6 +147,10 @@ class NobelAPI:
 
 
     def category_introduction_year(self):
+        """
+        Creates a dictionary of the different prize categories and the year they were added
+        :return: dictionary of prize categories and year they were made
+        """
         pipeline = [
             {"$unwind": "$prizes"},
             {"$group": {
@@ -129,6 +164,12 @@ class NobelAPI:
 
 
     def top_category_per_country(self, limit=10):
+        """
+        Creates a dictionary of dictionaries of each country and the prize category that is highest for that
+        country from largest to smallest
+        :param limit: the number of countries to return, defaults to 10
+        :return: dictionary of country and prize categories
+        """
         pipeline = [
             {"$match": {"bornCountry": {"$exists": True}}},
             {"$unwind": "$prizes"},
@@ -150,6 +191,10 @@ class NobelAPI:
 
 
     def plot_age_histogram(self):
+        """
+        Creates a histogram of the age distribution of prizes
+        :return: None, creates visualization
+        """
         data = self.ages_of_laureates()
         labels = list(data.keys())
         counts = list(data.values())
@@ -160,6 +205,10 @@ class NobelAPI:
         plt.show()
 
     def plot_category_winners(self):
+        """
+        Creates a stacked histogram of the prize categories and the number of collaborators for that prize
+        :return: None, creates visualization
+        """
         pipeline = [
             {"$unwind": "$prizes"},
             {"$group": {
@@ -199,6 +248,10 @@ class NobelAPI:
         plt.show()
 
     def plot_age_over_time(self):
+        """
+        Creates a scatter plot of the age distribution of prizes over the years with a line of best fit
+        :return: None, creates visualization
+        """
         data = self.laureate_ages_yearly()
 
         years = [d["year"] for d in data]
@@ -218,8 +271,9 @@ api = NobelAPI(db)
 
 # print(api.top_categories())
 # print(api.top_countries())
+# print(api.top_category_per_country())
 # print(api.most_prizes_per_year())
 
 # api.plot_age_histogram()
 # api.plot_category_winners()
-# api.plot_age_over_time()
+api.plot_age_over_time()
