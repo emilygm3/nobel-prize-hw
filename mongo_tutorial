@@ -1,4 +1,5 @@
-Full mongo tutorial with nobel prize winner data
+Full mongo tutorial with Nobel prize winner data
+By Eleanor Lopez, Ella Bitterman, and Emily Moy
     - First, download laureates_array.json
 
 How to load laureate data into database using shell
